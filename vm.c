@@ -1,54 +1,132 @@
 #include <bits/types.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h> // slight pain, just a bit
 
 uint16_t regs[16];
 
 uint8_t memory[4096];
 
+typedef enum variable_type {
+    reg = 0,
+    deref_reg,
+    imm16,
+    deref_imm16 = 3,
+} variable_t;
+
+char* variable_type_names[4] = {
+    "reg",
+    "deref_reg",
+    "imm16",
+    "deref_imm16",
+};
+
+void print_vartype(variable_t variable_type) {
+    printf("Type: %s\n", variable_type_names[variable_type]);
+}
+
 uint16_t get_word(FILE* file) {
     uint16_t ret;
+    uint16_t tmp;
     ret = (uint8_t) fgetc(file);
     ret = ret | (((uint16_t) 0x00FF & (uint8_t) fgetc(file)) << 8);
     return ret;
 }
 
+void parse_variables(variable_t output[4], uint8_t byte) {
+    output[0] = (byte & 0b11000000) >> 6;
+    output[1] = (byte & 0b00110000) >> 4; // no i do not know how to binary logic
+    output[2] = (byte & 0b00001100) >> 2;
+    output[3] = (byte & 0b11000011) >> 0;
+}
+
+void set(variable_t variable_type, uint16_t index, uint16_t val) {
+    switch(variable_type) {
+        case reg: {
+            regs[index] = val;
+            break;
+        }
+        case deref_reg: {
+            memory[regs[index]] = val;
+            break;
+        }
+        case imm16: {
+            // whot
+            printf("Tried to set?? an imm16???\n");
+            exit(1);
+            break;
+        }
+        case deref_imm16: {
+            memory[index] = val;
+            break;
+        }
+    }
+}
+
+uint16_t get(variable_t variable_type, uint16_t val) {
+    uint16_t ret;
+    switch(variable_type) {
+        case reg: {
+            ret = regs[val];
+            break;
+        }
+        case deref_reg: {
+            ret = memory[regs[val]];
+            break;
+        }
+        case imm16: {
+            ret = val;
+            break;
+        }
+        case deref_imm16: {
+            ret = memory[val];
+            break;
+        }
+    }
+    return ret;
+}
+
 int main(int argc, char** argv) {
-    int current = 642;
+    int current;
+    int suffix;
+    int file_len;
+    variable_t variables[4];
+    regs[0] = 0;
     if (argc < 2) { return 1; }
     printf("Opening %s\n", argv[1]);
     FILE* file = fopen(argv[1], "r");
+    fseek(file, 0, SEEK_END);
+    file_len = ftell(file);
+    fseek(file, 0, SEEK_SET);
     current = fgetc(file);
-    while(current != EOF) {
+    suffix = fgetc(file);
+    while(regs[0] <= file_len - (4 * 2 -1)) {
         printf("Current: %x\n", current);
+        printf("Suffix: %x\n", suffix);
+        parse_variables(variables, suffix);
         regs[0] += 4 * 2; // increment PC by 4 words
         switch (current) {
-            case 0x00 : { // MOVR
-                uint16_t imm16_0 = get_word(file);
-                uint16_t reg_0 = get_word(file);
-                printf("MOVR: imm16_0: %#04x reg_0: %#04x\n", imm16_0, reg_0);
-                memory[imm16_0] = regs[reg_0];
+            case 0x00 : { // MOV
+                uint16_t output = get_word(file);
+                uint16_t input = get_word(file);
+                printf("MOV: output: %#04x input: %#04x\n", output, input);
+                set(variables[0], output, get(variables[1], input));
+                printf("Result: %#04x\n", get(variables[0], output));
                 break;
             }
 
-            case 0x21 : { // LOADI
-                uint16_t reg_0 = get_word(file);
-                uint16_t imm16_0 = get_word(file);
-                printf("LOADI: imm16_0: %#04x reg_0: %#04x\n", imm16_0, reg_0);
-                regs[reg_0] = imm16_0;
-                break;
-            }
-
-            case 0x31 : { // ADDI
-                uint16_t reg_0 = get_word(file);
-                uint16_t imm16_0 = get_word(file);
-                printf("ADDI: imm16_0: %#04x reg_0: %#04x\n", imm16_0, reg_0); // todo: fix ordering
-                regs[reg_0] = regs[reg_0] + imm16_0;
-                printf("Result: %#04x", regs[reg_0]);
+            case 0x01 : { // ADD
+                uint16_t output = get_word(file);
+                uint16_t inp1 = get_word(file);
+                uint16_t inp2 = get_word(file);
+                printf("ADD: output: %#04x inp1: %#04x inp1: %#04x\n", output, inp1, inp2); // todo: fix ordering
+                set(variables[0], output, (get(variables[1], inp1) + get(variables[2], inp2)));
+                printf("Result: %#04x\n", get(variables[0], output));
                 break;
             }
         }
         fseek(file, regs[0], SEEK_SET);
         current = fgetc(file);
+        suffix = fgetc(file);
     }
 }
