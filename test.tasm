@@ -1,6 +1,5 @@
-_entry:
-    out.ri 0 0 
-    mov.ri 1 1000 # setup what I guess is the stack
+entry:
+    mov.ri 1 100 # setup what I guess is the stack
     mov.ri 0 start
 
 call: # move the target to reg 15 and the resume point to reg 14 then come here
@@ -12,15 +11,16 @@ ret:
     add.rri 1 1 1 # add 1 to the stack pointer
     mov.rd 0 1 # jump back!
 
-
+somefn: # use with call
+    out.ri 1 69
+    mov.ri 0 ret
 
 start:
-    mov.ri 4 20 # total count for the loop to run
-
-loop:
-    add.rri 3 3 1
-    sub.rri 4 4 1 # decrement the counter
-    ifnz.rir 0 loop 4 # if counter is not 0 run loop again
- 
+    out.ri 1 41
+    mov.ri 15 somefn
+    mov.ri 14 resume
+    mov.ri 0 call
+resume:
+    out.ri 1 40
 end:
     # we are done

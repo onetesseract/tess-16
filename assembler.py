@@ -71,7 +71,7 @@ def compile_line(line):
             compiled.append(None) # need two bytes for this
             continue
         i = int(i)
-        high = i & 0xFF00 >> 8
+        high = (i & 0xFF00) >> 8
         low = i & 0x00FF
         compiled.append(low)
         compiled.append(high)

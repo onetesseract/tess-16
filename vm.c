@@ -29,7 +29,8 @@ char* variable_type_names[4] = {
 };
 
 void print_vartype(variable_t variable_type) {
-    printf("Type: %s\n", variable_type_names[variable_type]);
+    if(variable_type > 3) { printf("invalid"); }
+    else printf("%s", variable_type_names[variable_type]);
 }
 
 uint16_t get_word(FILE* file) {
@@ -41,13 +42,22 @@ uint16_t get_word(FILE* file) {
 }
 
 void port0(uint16_t data) { // this just halts the program until user presses enter
+    #ifdef VERBOSE
     printf("port0: %#04x\n", data);
+    #else
+    printf("%#04x\n", data);
+    #endif
     getchar();
 }
 
 void port1(uint16_t data) { // this prints to stdout as ASCII
     char ascii = (char) data;
+    #ifdef VERBOSE
     printf("port1: %c\n", ascii);
+    #else
+    printf("%c", ascii);
+    #endif
+
 }
 
 void parse_variables(variable_t output[3], uint8_t byte) {
@@ -107,6 +117,7 @@ int main(int argc, char** argv) {
     int current;
     int suffix;
     int file_len;
+    int count = 1;
     variable_t variables[3];
     regs[0] = 0;
     if (argc < 2) { return 1; }
@@ -118,17 +129,31 @@ int main(int argc, char** argv) {
     current = fgetc(file);
     suffix = fgetc(file);
     while(regs[0] <= file_len - (4 * 2 -1)) {
+        #ifdef VERBOSE
         printf("Current: %x\n", current);
         printf("Suffix: %x\n", suffix);
+        printf("Count: %d\n", count);
+        #endif
         parse_variables(variables, suffix);
+        #ifdef VERY_VERBOSE
+        for(int i = 0; i < 4; i++) {
+            printf("Variable %d: ", i);
+            print_vartype(variables[i]);
+            printf("\n");
+        }
+        #endif
         regs[0] += 4 * 2; // increment PC by 4 words
         switch (current) {
             case 0x00 : { // MOV
                 uint16_t output = get_word(file);
                 uint16_t input = get_word(file);
+                #ifdef VERBOSE
                 printf("MOV: output: %#04x input: %#04x\n", output, input);
+                #endif
                 set(variables[0], output, get(variables[1], input));
+                #ifdef VERBOSE
                 printf("Result: %#04x\n", get(variables[0], output));
+                #endif
                 break;
             }
 
@@ -136,9 +161,13 @@ int main(int argc, char** argv) {
                 uint16_t output = get_word(file);
                 uint16_t inp1 = get_word(file);
                 uint16_t inp2 = get_word(file);
+                #ifdef VERBOSE
                 printf("ADD: output: %#04x inp1: %#04x inp1: %#04x\n", output, inp1, inp2); // todo: fix ordering
+                #endif
                 set(variables[0], output, (get(variables[1], inp1) + get(variables[2], inp2)));
+                #ifdef VERBOSE
                 printf("Result: %#04x\n", get(variables[0], output));
+                #endif
                 break;
             }
 
@@ -146,9 +175,13 @@ int main(int argc, char** argv) {
                 uint16_t output = get_word(file);
                 uint16_t input1 = get_word(file);
                 uint16_t input2 = get_word(file);
+                #ifdef VERBOSE
                 printf("SUB: output: %#04x inp1: %#04x inp1: %#04x\n", output, input1, input2);
+                #endif
                 set(variables[0], output, (get(variables[1], input1) - get(variables[2], input2)));
+                #ifdef VERBOSE
                 printf("Result: %#04x\n", get(variables[0], output));
+                #endif
                 break;
             }
 
@@ -156,18 +189,24 @@ int main(int argc, char** argv) {
                 uint16_t output = get_word(file);
                 uint16_t input = get_word(file);
                 uint16_t check = get_word(file);
+                #ifdef VERBOSE
                 printf("IFNZ: output: %#04x inp1: %#04x check: %#04x\n", output, input, check);
+                #endif
                 if(get(variables[2], check) != 0) {
                     set(variables[0], output, get(variables[1], input));
                 }
+                #ifdef VERBOSE
                 printf("Result: %#04x\n", get(variables[0], output));
+                #endif
                 break;
             }
 
             case 0x04 : { // out
                 uint16_t port = get_word(file);
                 uint16_t data = get_word(file);
+                #ifdef VERBOSE
                 printf("OUT: port: %#04x data: %04x\n", port, data);
+                #endif
                 data = get(variables[1], data);
                 (*ports[port])(data);
                 break;
@@ -176,5 +215,6 @@ int main(int argc, char** argv) {
         fseek(file, regs[0], SEEK_SET);
         current = fgetc(file);
         suffix = fgetc(file);
+        count++;
     }
 }
