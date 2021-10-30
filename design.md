@@ -26,6 +26,12 @@ etc etc
 ....  | ADD.RII reg-0 imm16-0 imm16-1    => reg-0 = imm16-0 + imm16-1  
 etc etc  
 
-0x03  | IFR reg-0 reg-1 reg-2  => if (reg-2 == 0) reg-0 = reg-1  
+0x02  | SUB.rrr reg-0 reg-1 reg-2      => reg-0 = reg-1 - reg-2  
+  
+0x03  | IFNZ reg-0 reg-1 reg-2  => if (reg-2 != 0) reg-0 = reg-1  
+
+0x04  | OUT count val => this is special, the first variable type param is ignored
+                         it will be used for inter-component sending but for now will call little internal
+                         C routines.
 etc etc
 ```

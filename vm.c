@@ -3,9 +3,16 @@
 #include <stdint.h>
 #include <stdlib.h> // slight pain, just a bit
 
+void port0(uint16_t data);
+void port1(uint16_t data);
+
+typedef void (port_call_t)(uint16_t);
+
 uint16_t regs[16];
 
 uint8_t memory[4096];
+
+port_call_t* ports[] = {port0, port1};
 
 typedef enum variable_type {
     reg = 0,
@@ -33,11 +40,21 @@ uint16_t get_word(FILE* file) {
     return ret;
 }
 
-void parse_variables(variable_t output[4], uint8_t byte) {
+void port0(uint16_t data) { // this just halts the program until user presses enter
+    printf("port0: %#04x\n", data);
+    getchar();
+}
+
+void port1(uint16_t data) { // this prints to stdout as ASCII
+    char ascii = (char) data;
+    printf("port1: %c\n", ascii);
+}
+
+void parse_variables(variable_t output[3], uint8_t byte) {
     output[0] = (byte & 0b11000000) >> 6;
     output[1] = (byte & 0b00110000) >> 4; // no i do not know how to binary logic
     output[2] = (byte & 0b00001100) >> 2;
-    output[3] = (byte & 0b11000011) >> 0;
+    // output[3] = (byte & 0b11000011) >> 0;
 }
 
 void set(variable_t variable_type, uint16_t index, uint16_t val) {
@@ -90,7 +107,7 @@ int main(int argc, char** argv) {
     int current;
     int suffix;
     int file_len;
-    variable_t variables[4];
+    variable_t variables[3];
     regs[0] = 0;
     if (argc < 2) { return 1; }
     printf("Opening %s\n", argv[1]);
@@ -122,6 +139,37 @@ int main(int argc, char** argv) {
                 printf("ADD: output: %#04x inp1: %#04x inp1: %#04x\n", output, inp1, inp2); // todo: fix ordering
                 set(variables[0], output, (get(variables[1], inp1) + get(variables[2], inp2)));
                 printf("Result: %#04x\n", get(variables[0], output));
+                break;
+            }
+
+            case 0x02 : { // SUB
+                uint16_t output = get_word(file);
+                uint16_t input1 = get_word(file);
+                uint16_t input2 = get_word(file);
+                printf("SUB: output: %#04x inp1: %#04x inp1: %#04x\n", output, input1, input2);
+                set(variables[0], output, (get(variables[1], input1) - get(variables[2], input2)));
+                printf("Result: %#04x\n", get(variables[0], output));
+                break;
+            }
+
+            case 0x03 : { // IFNZ
+                uint16_t output = get_word(file);
+                uint16_t input = get_word(file);
+                uint16_t check = get_word(file);
+                printf("IFNZ: output: %#04x inp1: %#04x check: %#04x\n", output, input, check);
+                if(get(variables[2], check) != 0) {
+                    set(variables[0], output, get(variables[1], input));
+                }
+                printf("Result: %#04x\n", get(variables[0], output));
+                break;
+            }
+
+            case 0x04 : { // out
+                uint16_t port = get_word(file);
+                uint16_t data = get_word(file);
+                printf("OUT: port: %#04x data: %04x\n", port, data);
+                data = get(variables[1], data);
+                (*ports[port])(data);
                 break;
             }
         }
