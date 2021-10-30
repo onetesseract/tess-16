@@ -1,0 +1,24 @@
+%jmp
+    mov.ri 0 @0
+%
+
+entry:
+    mov.ri 1 100 # setup what I guess is the stack
+    $jmp start
+
+str: dat 98 101 110 32 115 109 101 108 108 115
+endstr:
+
+start:
+    mov.ri 2 str
+loop:
+    sub.rri 2 2 endstr
+    ifnz.rir 0 loop_cont 2
+    $jmp end
+loop_cont:
+    add.rri 2 2 endstr
+    out.rd 1 2
+    add.rri 2 2 2
+    $jmp loop
+end:
+    # we are done

@@ -1,11 +1,16 @@
 import sys
 
 opcodes = {
-    "mov": 0x00,
-    "add": 0x01,
-    "sub": 0x02,
-    "ifnz": 0x03,
-    "out": 0x04,
+    "hlt": 0x00,
+    "mov": 0x01,
+    "add": 0x02,
+    "sub": 0x03,
+    "ifnz": 0x04,
+    "out": 0x05,
+}
+
+macros = {
+
 }
 
 locations = {
@@ -46,8 +51,18 @@ def compile_suffix(suffix_str):
 
 
 def compile_line(line):
+    global output
     print(f"Line: {line}")
     split = line.strip().split(" ")
+    if split[0].startswith("%"):
+        # oh no its a macro def
+        macro = ""
+        line = read_line()
+        while not line.startswith("%"):
+            macro += line
+            line = read_line()
+        macros[split[0][1:]] = macro
+        return None
     if split[0].endswith(":"):
         # We have hit a declarator thingy
         name = split[0][:-1]
@@ -59,7 +74,38 @@ def compile_line(line):
         if len(split) == 0:
             return None
     if split[0].startswith("#"): return 
-    instruction_kw, suffix = split[0].split(".")[0].lower(), split[0].split(".")[1].lower()
+    if split[0].startswith("$"):
+        macro = macros[split[0][1:]]
+        count = 0
+        for i in split[1:]:
+            if i == "": continue
+            macro = i.join(macro.split("@" + str(count)))
+            count += 1
+        print(f"Macro unpacked: {macro}")
+        for line in macro.split("\n"):
+            if line.strip() == "": continue
+            res = compile_line(line)
+            if res == None: continue
+            print(f"Macro out: {res}")
+            output += res
+        return None
+    instruction_kw = split[0].split(".")[0].lower()
+    if instruction_kw == "dat":
+        compiled = []
+        for i in split[1:]:
+            if i == "": continue
+            if i.startswith("#"): break # hit a comment
+            if any(c.isalpha() for c in i):
+                compiled.append(i)
+                compiled.append(None) # need two bytes for this
+                continue
+            i = int(i)
+            high = (i & 0xFF00) >> 8
+            low = i & 0x00FF
+            compiled.append(low)
+            compiled.append(high)
+        return compiled
+    suffix = split[0].split(".")[1].lower()
     opcode = opcodes[instruction_kw]
     suffix_code = compile_suffix(suffix)
     compiled = [opcode, suffix_code]
@@ -96,6 +142,7 @@ if __name__ == "__main__":
         output += out
     print(output)
     print(locations)
+    print(macros)
     real_out = []
     for i in output:
         if i == None:

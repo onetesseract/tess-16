@@ -1,4 +1,4 @@
 *.out
 *.bin
 *.out-sendhelp
-__pycache__/**
+/__pycache__

@@ -1,0 +1,6 @@
+%jmp
+    mov.ri 0 @0
+%
+
+pumm:
+$jmp pumm

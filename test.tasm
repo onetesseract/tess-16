@@ -1,26 +1,38 @@
+%jmp_imm
+    mov.ri 0 @0
+%
+
+%push_imm
+    mov.di 1 @0
+    sub.rri 1 1 1
+%
+
+%call_imm
+    $push_imm @1 # push resume point
+    $jmp_imm @0
+%
+
 entry:
     mov.ri 1 100 # setup what I guess is the stack
-    mov.ri 0 start
+    $jmp_imm start
 
 call: # move the target to reg 15 and the resume point to reg 14 then come here
     mov.dr 1 14 # move the resume point to the stack pointer
     sub.rri 1 1 1 # subtract 1 from the stack pointer
     mov.rr 0 15 # jump!
-
 ret:
     add.rri 1 1 1 # add 1 to the stack pointer
     mov.rd 0 1 # jump back!
 
-somefn: # use with call
+somefn:
     out.ri 1 69
-    mov.ri 0 ret
+    $jmp_imm ret
 
 start:
-    out.ri 1 41
-    mov.ri 15 somefn
-    mov.ri 14 resume
-    mov.ri 0 call
+    $call_imm somefn resume
 resume:
-    out.ri 1 40
+    out.ri 1 70
+    out.ri 1 70
+    out.ri 1 70
 end:
     # we are done
