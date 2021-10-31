@@ -3,7 +3,7 @@
 16 bit word width  
 no mapping things to memory
 14 GP regs - 2 through F  
-PC, SP regs accessible - 0 through 1 but no use for SP yet  
+PC, SP regs accessible - 0 through 1 but no use for SP yet - there is now, but it has to be hardcoded  
 
 # instructions  
 all instructions will have a length of 4 words, last arg padded with 0s  
@@ -27,7 +27,7 @@ etc etc
 ....  | ADD.RII reg-0 imm16-0 imm16-1    => reg-0 = imm16-0 + imm16-1  
 etc etc  
 
-0x03  | SUB.rrr reg-0 reg-1 reg-2      => reg-0 = reg-1 - reg-2  
+0x03  | SUB.rrr reg-0 reg-1 reg-2      => reg-0 = reg-1 - reg-2  this is useless, will not be implemented and will be replaced when I figure out something to replace it with
   
 0x04  | IFNZ reg-0 reg-1 reg-2  => if (reg-2 != 0) reg-0 = reg-1  
 
