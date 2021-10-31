@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
                 uint16_t inp1 = get_word(file);
                 uint16_t inp2 = get_word(file);
                 #ifdef VERBOSE
-                printf("ADD: output: %#04x inp1: %#04x inp1: %#04x\n", output, inp1, inp2); // todo: fix ordering
+                printf("ADD: output: %#04x inp1: %#04x inp2: %#04x\n", output, inp1, inp2); // todo: fix ordering
                 #endif
                 set(variables[0], output, (get(variables[1], inp1) + get(variables[2], inp2)));
                 #ifdef VERBOSE
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
                 uint16_t input1 = get_word(file);
                 uint16_t input2 = get_word(file);
                 #ifdef VERBOSE
-                printf("SUB: output: %#04x inp1: %#04x inp1: %#04x\n", output, input1, input2);
+                printf("SUB: output: %#04x inp1: %#04x inp2: %#04x\n", output, input1, input2);
                 #endif
                 set(variables[0], output, (get(variables[1], input1) - get(variables[2], input2)));
                 #ifdef VERBOSE
@@ -247,6 +247,38 @@ int main(int argc, char** argv) {
                 data = get(variables[1], data);
                 (*ports[port])(data);
                 break;
+            }
+
+            case 0x06 : { // NOT
+                uint16_t output = get_word(file);
+                uint16_t input = get_word(file);
+                #ifdef VERBOSE
+                printf("NOT: output: %#04x input: %#04x\n", output, input);
+                #endif
+                set(variables[0], output, ~get(variables[1], input));
+                #ifdef VERBOSE
+                printf("Result: %#04x\n", get(variables[0], output));
+                #endif
+                break;
+            }
+
+            case 0x07 : { // AND
+                uint16_t output = get_word(file);
+                uint16_t input1 = get_word(file);
+                uint16_t input2 = get_word(file);
+                #ifdef VERBOSE
+                printf("AND: output: %#04x inp1: %#04x inp2: %#04x\n", output, input1, input2);
+                #endif
+                set(variables[0], output, (get(variables[1], input1) & get(variables[2], input2)));
+                #ifdef VERBOSE
+                printf("Result: %#04x\n", get(variables[0], output));
+                #endif
+                break;
+            }
+
+            default : {
+                printf("I don't know how to execute %#x\n", current);
+                exit(1);
             }
         }
         true_pc = regs[0], SEEK_SET;
